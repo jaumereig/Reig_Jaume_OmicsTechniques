@@ -1,0 +1,90 @@
+---
+title: "Reig_Jaume_Exercise1_Omics"
+author: "Jaume"
+date: "22 de mayo de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introduction
+Pulmonary CDC11c+ cells from young and middle-age animal.
+
+# Summary
+Analysis of pulmonary CDC11c+ cells from 6-8 week and 10-13 month old C57BL/6 animals. CDC11c+ cells are key modulators of the immune response in the lung. Results provide insight into molecular mechanisms underlying the decline in immune function associated with aging.
+
+# Organism
+Mus musculus
+
+#Data descriptions
+Eight samples of mice; 4 from middle-age and 4 from young mice. Two groups
+
+# Citation
+Vijay R, Hua X, Meyerholz DK, Miki Y et al. Critical role of phospholipase A2 group IID in age-related susceptibility to severe acute respiratory syndrome-CoV infection. J Exp Med 2015 Oct 19;212(11):1851-68. PMID: 26392224
+
+# Exercise 1 starts here
+```{r READTARGETS}
+read_targets <- read.delim("A_Targets_experiment.txt")
+read_expression <- as.matrix(read.delim("expression.txt", header = TRUE, row.names = 1))
+head(expression)
+
+```
+
+```{r}
+myInfo=list(myName="Jaume Reig", myLab="Bioinformatics Lab",
+myContact="jaume.reig@alum.esci.upf.edu", myTitle="Practical Exercise on ExpressionSets")
+show(myInfo)
+```
+
+
+```{r}
+show(read_targets)
+dim(read_expression)
+head(summary(read_expression))
+```
+
+```{r}
+boxplot(read_expression)
+```
+
+```{r}
+pat_data <- as.matrix(read.table("A_Targets_experiment.txt", row.names = 1, header = TRUE, sep = "\t"))
+dim(pat_data)
+summary(pat_data)
+```
+
+```{r}
+metadata <- as.matrix(data.frame(labelDescription = c("Age", "Score"), row.names = c("age", "score")))
+
+metadata
+```
+
+
+```{r}
+require(Biobase)
+columnDesc <- data.frame(labelDescription = c("ID", "TYPE_OF_EPOC", "TYPE_OF_PATIENT"))
+myannotDF <- new("AnnotatedDataFrame", data = read_targets, varMetadata = columnDesc)
+myannotDF
+```
+
+```{r}
+Example_set <- ExpressionSet(assayData = read_expression, phen_data = metadata)
+myEset <- ExpressionSet(read_expression)
+myEset
+```
+
+```{r}
+phenoData(myEset) <- myannotDF
+phenoData(myEset)
+```
+
+
+```{r}
+myDesc <- new("MIAME", name= myInfo[["myName"]],
+lab= myInfo[["myLab"]],
+contact= myInfo[["myContact"]] ,
+title=myInfo[["myTitle"]])
+print(myDesc)
+```
+
