@@ -1,0 +1,212 @@
+---
+title: "exercise_2"
+author: "Jaume"
+date: "24 de mayo de 2019"
+output: html_document
+---
+
+#---------------------------------------------------------------------------------------------
+###INSTALLATION OF PACKAGES NEEDED
+#---------------------------------------------------------------------------------------------
+```{r}
+if (!require(BiocManager)) install.packages("BiocManager")
+
+installifnot <- function (pkg){
+  if (!require(pkg, character.only=T)){
+    BiocManager::install(pkg)
+}else{
+  require(pkg, character.only=T)
+}
+}
+installifnot("pd.mogene.1.0.st.v1")
+installifnot("mogene10sttranscriptcluster.db")
+installifnot("oligo")
+installifnot("limma")
+installifnot("Biobase")
+installifnot("arrayQualityMetrics")
+installifnot("genefilter")
+installifnot("multtest")
+installifnot("annotate")
+installifnot("xtable")
+installifnot("gplots")
+installifnot("scatterplot3d")
+```
+
+#---------------------------------------------------------------------------------------------
+###LOAD DATA: TARGETS AND CEL FILES. 
+#---------------------------------------------------------------------------------------------
+
+```{r}
+require(Biobase)
+workingDir <- getwd()
+dataDir <- file.path(workingDir, "data")
+resultsDir <- file.path(workingDir, "results")
+```
+
+
+```{r}
+#TARGETS
+read_targets <- read.delim("~/Escritorio/Exercise_2/data/A_Targets_experiment.txt")
+```
+
+```{r}
+#CELFILES
+CELfiles <- list.celfiles(file.path(dataDir))
+CELfiles
+rawData <- read.celfiles(file.path(dataDir,CELfiles))
+```
+
+
+```{r}
+#DEFINE SOME VARIABLES FOR PLOTS
+sample_id <- as.character(read_targets$ID)
+sample_epoc <-as.character(read_targets$TYPE_OF_EPOC)
+sample_patient <-as.character(read_targets$TYPE_OF_PATIENT)
+
+```
+
+#---------------------------------------------------------------------------------------------
+###QUALITY CONTROL OF ARRAYS: RAW DATA
+#---------------------------------------------------------------------------------------------
+
+```{r}
+#BOXPLOT
+boxplot(rawData, which="all",las=2, main="Intensity distribution of RAW data", 
+        cex.axis=0.6, col=sampleColor, names=sample_patient)
+```
+
+```{r}
+#HIERARQUICAL CLUSTERING
+clust.euclid.average <- hclust(dist(t(exprs(rawData))),method="average")
+plot(clust.euclid.average, labels=sample_id, main="Hierarchical clustering of RawData", cex=0.7, hang=-1)
+```
+
+```{r}
+#PRINCIPAL COMPONENT ANALYSIS
+plotPCA <- function ( X, labels=NULL, colors=NULL, dataDesc="", scale=FALSE, formapunts=NULL, myCex=0.8,...)
+{
+  pcX<-prcomp(t(X), scale=scale) # o prcomp(t(X))
+  loads<- round(pcX$sdev^2/sum(pcX$sdev^2)*100,1)
+  xlab<-c(paste("PC1",loads[1],"%"))
+  ylab<-c(paste("PC2",loads[2],"%"))
+  if (is.null(colors)) colors=1
+  plot(pcX$x[,1:2],xlab=xlab,ylab=ylab, col=colors, pch=formapunts, 
+       xlim=c(min(pcX$x[,1])-100000, max(pcX$x[,1])+100000),ylim=c(min(pcX$x[,2])-100000, max(pcX$x[,2])+100000))
+  text(pcX$x[,1],pcX$x[,2], labels, pos=3, cex=myCex)
+  title(paste("Plot of first 2 PCs for expressions in", dataDesc, sep=" "), cex=0.8)
+}
+
+plotPCA(exprs(rawData), labels=sample_id, dataDesc="raw data", colors=sampleColor,
+        formapunts=c(rep(16,4),rep(17,4)), myCex=0.6)
+```
+
+```{r}
+#SAVE TO A FILE
+pdf(file.path(resultsDir, "QCPlots_Raw.pdf"))
+boxplot(rawData, which="all",las=2, main="Intensity distribution of RAW data", 
+        cex.axis=0.6, col=sampleColor, names=sampleNames)
+
+plot(clust.euclid.average, labels=sample_id, main="Hierarchical clustering of RawData", cex=0.7, hang=-1)
+
+plotPCA(exprs(rawData), labels=sample_id, dataDesc="raw data", colors=sampleColor,
+        formapunts=c(rep(16,4),rep(17,4)), myCex=0.6)
+dev.off()
+```
+
+#---------------------------------------------------------------------------------------------
+###DATA NORMALIZATION
+#---------------------------------------------------------------------------------------------
+
+```{r}
+eset<-rma(rawData)
+write.exprs(eset, file.path(resultsDir, "NormData.txt"))
+```
+
+#---------------------------------------------------------------------------------------------
+###QUALITY CONTROL OF ARRAYS: NORMALIZED DATA
+#---------------------------------------------------------------------------------------------
+
+
+```{r}
+#BOXPLOT
+boxplot(eset, las=2, main="Intensity distribution of Normalized data", cex.axis=0.6, 
+        col=sampleColor, names=sampleNames)
+```
+
+```{r}
+#HIERARQUICAL CLUSTERING
+clust.euclid.average <- hclust(dist(t(exprs(eset))),method="average")
+plot(clust.euclid.average, labels=sample_id, main="Hierarchical clustering of NormData", 
+     cex=0.7,  hang=-1)
+```
+
+```{r}
+#PRINCIPAL COMPONENT ANALYSIS
+plotPCA <- function ( X, labels=NULL, colors=NULL, dataDesc="", scale=FALSE, formapunts=NULL, myCex=0.8,...)
+{
+  pcX<-prcomp(t(X), scale=scale) # o prcomp(t(X))
+  loads<- round(pcX$sdev^2/sum(pcX$sdev^2)*100,1)
+  xlab<-c(paste("PC1",loads[1],"%"))
+  ylab<-c(paste("PC2",loads[2],"%"))
+  if (is.null(colors)) colors=1
+  plot(pcX$x[,1:2],xlab=xlab,ylab=ylab, col=colors, pch=formapunts, 
+       xlim=c(min(pcX$x[,1])-10, max(pcX$x[,1])+10),ylim=c(min(pcX$x[,2])-10, max(pcX$x[,2])+10))
+  text(pcX$x[,1],pcX$x[,2], labels, pos=3, cex=myCex)
+  title(paste("Plot of first 2 PCs for expressions in", dataDesc, sep=" "), cex=0.8)
+}
+
+plotPCA(exprs(eset), labels=sample_id, dataDesc="NormData", colors=sampleColor,
+        formapunts=c(rep(16,4),rep(17,4)), myCex=0.6)
+```
+
+```{r}
+#SAVE TO A FILE
+pdf(file.path(resultsDir, "QCPlots_Norm.pdf"))
+boxplot(eset, las=2, main="Intensity distribution of Normalized data", cex.axis=0.6, 
+        col=sampleColor, names=sampleNames)
+plot(clust.euclid.average, labels=sample_id, main="Hierarchical clustering of NormData", 
+     cex=0.7,  hang=-1)
+plotPCA(exprs(eset), labels=sample_id, dataDesc="selected samples", colors=sampleColor,
+        formapunts=c(rep(16,4),rep(17,4)), myCex=0.6)
+dev.off()
+```
+
+```{r}
+#ARRAY QUALITY METRICS
+arrayQualityMetrics(eset,  reporttitle="QualityControl", force=TRUE)
+```
+
+#---------------------------------------------------------------------------------------------
+###FILTER OUT THE DATA
+#---------------------------------------------------------------------------------------------
+
+```{r}
+annotation(eset) <- "org.Mm.eg.db"
+eset_filtered <- nsFilter(eset, var.func=IQR,
+         var.cutoff=0.75, var.filter=TRUE,
+         filterByQuantile=TRUE)
+```
+
+```{r}
+#NUMBER OF GENES OUT
+print(eset_filtered$filter.log$numLowVar)
+```
+
+```{r}
+#NUMBER OF GENES IN
+print(eset_filtered$eset)
+```
+
+#---------------------------------------------------------------------------------------------
+###DIFERENTIAL EXPRESSED GENES SELECTION. LINEAR MODELS. COMPARITIONS
+#---------------------------------------------------------------------------------------------
+
+```{r}
+#CONTRAST MATRIX.lINEAR MODEL
+treat <- read_targets$TYPE_OF_EPOC
+lev <- factor(treat, levels = unique(treat))
+design <-model.matrix(~0+lev)
+colnames(design) <- levels(lev)
+rownames(design) <- sampleNames
+print(design)
+```

@@ -4,7 +4,6 @@ author: "Jaume"
 date: "22 de mayo de 2019"
 output: html_document
 ---
-KDMCASDMCAS
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
